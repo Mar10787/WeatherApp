@@ -6,23 +6,28 @@ use App\Http\Controllers\Controller;
 use App\Services\WeatherService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 
 class WeatherController extends Controller
 {
     private $weatherService;
 
     public function __construct(WeatherService $weatherService){
-        $this->weatherService =$weatherService;
+        $this->weatherService = $weatherService;
+        Log::info('WeatherController constructed');
     }
 
     public function getCities(): JsonResponse{
+        Log::info('getCities method called');
         return response()->json([
             'cities' => $this->weatherService->getValidCities()
         ]);
     }
 
     public function getForecast(Request $request): JsonResponse{
-        $request ->validate([
+        Log::info('getForecast method called', ['request' => $request->all()]);
+        
+        $request->validate([
             'city' => 'required|string'
         ]);
 
@@ -39,9 +44,10 @@ class WeatherController extends Controller
 
             return response()->json([
                 'success'=> true,
-                'date' => $forecast
+                'data' => $forecast
             ]);
         } catch (\Exception $e){
+            Log::error('Forecast error', ['error' => $e->getMessage()]);
             return response()->json([
                 'error'=>'Failed to fetch weather data',
                 'message' => $e->getMessage()
