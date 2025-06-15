@@ -70,4 +70,17 @@ class WeatherService{
         }
     return $forecast;
     }
+
+    public function getValidCities(){
+        return [
+            'Brisbane',
+            'Gold Coast',
+            'Sunshine Coast'
+        ];
+    }
+
+    public function isValidCity($city)
+    {
+        return in_array($city, $this->getValidCities());
+    }
 }
