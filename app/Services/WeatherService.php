@@ -31,7 +31,9 @@ class WeatherService{
                     throw new Exception("Failed to get location key");
                 }
 
-                $locationKey = $locationResponse->json()[0]['Key'];
+                $locationData = $locationResponse->json()[0];
+                $locationKey = $locationData['Key'];
+                $cityName = $locationData['LocalizedName'];
 
                 $forecastResponse = Http::get("{$this->baseUrl}/forecasts/v1/daily/5day/{$locationKey}", [
                     'apikey' => $this->apiKey,
@@ -43,10 +45,29 @@ class WeatherService{
                     throw new Exception("Forecast API Failed");
                 }
 
-                return $forecastResponse->json();
+                return $this->formatForecastData($forecastResponse->json(), $cityName);
             } catch (Exception $e){
                 throw new Exception("Weather Forecast Error: {$e->getMessage()}");
             }
         });
+    }
+
+    private function formatForecastData($data, $city){
+        $forecast = [];
+
+        foreach ($data['DailyForecasts'] as $day){
+            $min = round($day['Temperature']['Minimum']['Value'],2);
+            $max = round($day['Temperature']['Maximum']['Value'],2);
+            $avg = round(($max+$min)/2,2);
+
+            $forecast[] = [
+                'city' => $city,
+                'date' => $day['Date'],
+                'min_temp' => $min,
+                'max_temp' => $max,
+                'avg_temp' => $avg
+            ];
+        }
+    return $forecast;
     }
 }

@@ -3,13 +3,22 @@
 use Tests\TestCase;
 use App\Services\WeatherService;
 
-class WeatherServiceTest extends TestCase{
-    public function test_get_five_day_forecast_for_valid_city(){
+class WeatherServiceTest extends TestCase
+{
+    public function test_it_returns_five_day_forecast_structure()
+    {
         $service = new WeatherService();
         $forecast = $service->getFiveDayForecast('Brisbane');
 
         $this->assertIsArray($forecast);
-        $this->assertArrayHasKey('DailyForecasts', $forecast);
-        $this->assertCount(5, $forecast['DailyForecasts']);
+        $this->assertCount(5, $forecast);
+
+        foreach ($forecast as $day) {
+            $this->assertArrayHasKey('city', $day);
+            $this->assertArrayHasKey('date', $day);
+            $this->assertArrayHasKey('min_temp', $day);
+            $this->assertArrayHasKey('max_temp', $day);
+            $this->assertArrayHasKey('avg_temp', $day);
+        }
     }
 }
