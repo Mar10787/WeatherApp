@@ -75,7 +75,7 @@ class WeatherService{
         return [
             'Brisbane',
             'Gold Coast',
-            'Sunshine Coast'
+            'Sunshine Coast Airport'
         ];
     }
 

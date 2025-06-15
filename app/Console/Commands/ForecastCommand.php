@@ -4,10 +4,11 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Services\WeatherService;
+use Illuminate\Support\Facades\Log;
 
 class ForecastCommand extends Command
 {
-    protected $signature = 'forecast {cities*?}';
+    protected $signature = 'forecast {cities?*}';
     protected $description = 'Get a 5-day weather forecast for specified cities';
 
     private $weatherService;
@@ -18,23 +19,25 @@ class ForecastCommand extends Command
         $this->weatherService = $weatherService;
     }
 
-    public function handle(){
+    public function handle()
+    {
         $cities = $this->argument('cities');
 
-        if (empty($cities)){
+        if (empty($cities)) {
             $cities = $this->promptForCities();
-        }
-
+        } 
         $validCities = [];
-        foreach ($cities as $city){
-            if ($this->weatherService->isValidCity($city)){
+
+
+        foreach ($cities as $city) {
+            if ($this->weatherService->isValidCity($city)) {
                 $validCities[] = $city;
-            } else{
+            } else {
                 $this->error("Invalid city: {$city}");
             }
         }
 
-        if (empty($validCities)){
+        if (empty($validCities)) {
             $this->error('No valid cities provided.');
             return;
         }
@@ -42,23 +45,27 @@ class ForecastCommand extends Command
         $this->displayForecast($validCities);
     }
 
-    private function promptForCities(){
+    private function promptForCities()
+    {
         $availableCities = $this->weatherService->getValidCities();
 
-        $this->info('Available cities: '. implode(', ', $availableCities));
+        $this->info('Available cities: ' . implode(', ', $availableCities));
 
         $cities = [];
-        while(true){
+        while (true) {
             $city = $this->ask('Enter city name (or press Enter to finish)');
 
-            if (empty($city)){
+            if (empty($city)) {
                 break;
             }
 
-            if ($this->weatherService->isValidCity($city)){
+            // Replace spaces with underscores in city names
+            $city = str_replace(' ', '_', $city);
+
+            if ($this->weatherService->isValidCity($city)) {
                 $cities[] = $city;
                 $this->info("Added: {$city}");
-            } else{
+            } else {
                 $this->error("Invalid city: {$city}");
             }
         }
@@ -66,24 +73,25 @@ class ForecastCommand extends Command
         return $cities;
     }
 
-    private function displayForecast($cities){
+    private function displayForecast($cities)
+    {
         $tableData = [];
-        foreach($cities as $city){
-            try{
+        foreach ($cities as $city) {
+            try {
                 $forecast = $this->weatherService->getFiveDayForecast($city);
 
                 $row = [$city];
-                foreach($forecast['forecast'] as $day){
-                    $row[] = "Avg: {$day['avg_temp']}, Max: {$day['max_temp']}, Min:{$day['min_temp']}";
+                foreach ($forecast as $day) {
+                    $row[] = "Avg: {$day['avg_temp']}, Max: {$day['max_temp']}, Min: {$day['min_temp']}";
                 }
-                
-                $tableDate[] = $row;
 
-            } catch (\Exception $e){
-                this->error("Failed to get forecast for {$city}: " . $e->getMessage());
+                $tableData[] = $row;
+
+            } catch (\Exception $e) {
+                $this->error("Failed to get forecast for {$city}: " . $e->getMessage());
             }
         }
-        if (!empty($tableData)){
+        if (!empty($tableData)) {
             $headers = ['City', 'Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5'];
             $this->table($headers, $tableData);
         }
