@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\WeatherController;
+use App\Http\Controllers\WeatherController as WeatherControllerAlias;
 
 /*
 |--------------------------------------------------------------------------
@@ -23,4 +24,6 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::prefix('weather')->group(function () {
     Route::get('/forecast', [WeatherController::class, 'getForecast']);
     Route::get('/cities', [WeatherController::class, 'getCities']);
+    Route::get('/cities', [WeatherControllerAlias::class, 'getCities']);
+    Route::get('/{city}', [WeatherControllerAlias::class, 'getWeather']);
 }); 

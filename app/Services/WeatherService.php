@@ -22,18 +22,24 @@ class WeatherService{
 
         return Cache::remember($cacheKey, 60, function () use ($city) {
             try {
-                $locationResponse = Http::get("https://dataservice.accuweather.com/locations/v1/cities/search", [
-                    'apikey' => $this->apiKey,
-                    'q' => $city,
-                ]);
+                // Special case for Sunshine Coast
+                if ($city === 'Sunshine Coast') {
+                    $locationKey = '432_poi';
+                    $cityName = 'Sunshine Coast';
+                } else {
+                    $locationResponse = Http::get("https://dataservice.accuweather.com/locations/v1/cities/search", [
+                        'apikey' => $this->apiKey,
+                        'q' => $city,
+                    ]);
 
-                if ($locationResponse->failed()  || empty($locationResponse->json())){
-                    throw new Exception("Failed to get location key");
+                    if ($locationResponse->failed()  || empty($locationResponse->json())){
+                        throw new Exception("Failed to get location key");
+                    }
+
+                    $locationData = $locationResponse->json()[0];
+                    $locationKey = $locationData['Key'];
+                    $cityName = $locationData['LocalizedName'];
                 }
-
-                $locationData = $locationResponse->json()[0];
-                $locationKey = $locationData['Key'];
-                $cityName = $locationData['LocalizedName'];
 
                 $forecastResponse = Http::get("{$this->baseUrl}/forecasts/v1/daily/5day/{$locationKey}", [
                     'apikey' => $this->apiKey,
@@ -75,12 +81,33 @@ class WeatherService{
         return [
             'Brisbane',
             'Gold Coast',
-            'Sunshine Coast Airport'
+            'Sunshine Coast'
         ];
     }
 
     public function isValidCity($city)
     {
         return in_array($city, $this->getValidCities());
+    }
+
+    public function getCurrentWeather($city)
+    {
+        if (!$this->isValidCity($city)) {
+            throw new Exception("Invalid city: {$city}");
+        }
+
+        $forecast = $this->getFiveDayForecast($city);
+        
+        // Get today's forecast
+        $today = $forecast[0];
+        
+        return [
+            'city' => $today['city'],
+            'temperature' => [
+                'min' => $today['min_temp'],
+                'max' => $today['max_temp'],
+                'avg' => $today['avg_temp']
+            ]
+        ];
     }
 }

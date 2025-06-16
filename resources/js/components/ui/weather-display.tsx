@@ -7,65 +7,47 @@ import {
     DropdownMenuLabel
 } from '@/components/ui/dropdown-menu';
 import { MapPin } from 'lucide-react';
-
-interface WeatherData {
-    city: string;
-    temperature: {
-        min: number;
-        avg: number;
-        max: number;
-    };
-}
-
-const mockWeatherData: Record<string, WeatherData> = {
-    'Brisbane': {
-        city: 'Brisbane',
-        temperature: {
-            min: 18,
-            avg: 25,
-            max: 30
-        },
-    },
-    'Gold Coast': {
-        city: 'Gold Coast',
-        temperature: {
-            min: 20,
-            avg: 26,
-            max: 32
-        },
-    },
-    'Sunshine Coast': {
-        city: 'Sunshine Coast',
-        temperature: {
-            min: 19,
-            avg: 25,
-            max: 31
-        },
-    }
-};
-
-const getWeatherImage = (avgTemp: number): string =>{
-    const currentHour = new Date().getHours();
-    const isNight = currentHour >= 18 || currentHour < 6;
-
-    if (isNight){
-        return '/images/weather/clear-night.svg';
-    }
-    if (avgTemp >=35){
-        return '/images/weather/clear-day.svg';
-    }
-    else if (avgTemp >= 20){
-        return '/images/weather/overcast-day.svg';
-    }
-    else{
-        return '/images/weather/cloudy.svg'
-    }
-};
+import { weatherService, type WeatherData } from '@/services/weatherService';
 
 export const WeatherDisplay: React.FC = () => {
     const [selectedCity, setSelectedCity] = useState<string>('Brisbane');
     const [currentTime, setCurrentTime] = useState<Date>(new Date());
-    const weatherData = mockWeatherData[selectedCity];
+    const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
+    const [availableCities, setAvailableCities] = useState<string[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchCities = async () => {
+            try {
+                const cities = await weatherService.getAvailableCities();
+                setAvailableCities(cities);
+            } catch (err) {
+                setError('Failed to load cities');
+                console.error('Error fetching cities:', err);
+            }
+        };
+
+        fetchCities();
+    }, []);
+
+    useEffect(() => {
+        const fetchWeatherData = async () => {
+            setIsLoading(true);
+            setError(null);
+            try {
+                const data = await weatherService.getWeatherData(selectedCity);
+                setWeatherData(data);
+            } catch (err) {
+                setError('Failed to load weather data');
+                console.error('Error fetching weather data:', err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchWeatherData();
+    }, [selectedCity]);
 
     useEffect(() => {
         const timer = setInterval(() => {
@@ -75,7 +57,34 @@ export const WeatherDisplay: React.FC = () => {
         return () => clearInterval(timer);
     }, []);
 
-    const weatherImage = getWeatherImage(weatherData.temperature.avg)
+    const getWeatherImage = (avgTemp: number): string => {
+        const currentHour = currentTime.getHours();
+        const isNight = currentHour >= 18 || currentHour < 6;
+
+        if (isNight) {
+            return '/images/weather/clear-night.svg';
+        }
+        if (avgTemp >= 35) {
+            return '/images/weather/clear-day.svg';
+        }
+        else if (avgTemp >= 20) {
+            return '/images/weather/overcast-day.svg';
+        }
+        else {
+            return '/images/weather/cloudy.svg'
+        }
+    };
+
+    if (!weatherData) {
+        return (
+            <div className="bg-white/10 backdrop-blur-lg rounded-xl p-8 shadow-lg">
+                <div className="text-center text-white">Loading weather data...</div>
+            </div>
+        );
+    }
+
+    const weatherImage = getWeatherImage(weatherData.temperature.avg);
+
     return (
         <div className="bg-white/10 backdrop-blur-lg rounded-xl p-8 shadow-lg">
             <div className="space-y-4">
@@ -103,7 +112,10 @@ export const WeatherDisplay: React.FC = () => {
 
             <div className="mt-6">
                 <DropdownMenu>
-                    <DropdownMenuTrigger className="w-full flex items-center justify-between bg-white/20 text-white hover:bg-white/30 px-4 py-2 rounded-lg">
+                    <DropdownMenuTrigger 
+                        className={`w-full flex items-center justify-between bg-white/20 text-white hover:bg-white/30 px-4 py-2 rounded-lg ${isLoading ? 'opacity-50' : ''}`}
+                        disabled={isLoading}
+                    >
                         <span className="flex items-center gap-2">
                             <MapPin className="h-5 w-5" />
                             {selectedCity}
@@ -111,7 +123,7 @@ export const WeatherDisplay: React.FC = () => {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-[770px] bg-white/90 backdrop-blur-md border border-white/20">
                         <DropdownMenuLabel className="text-gray-700">Select City</DropdownMenuLabel>
-                        {Object.keys(mockWeatherData).map((city) => (
+                        {availableCities.map((city) => (
                             <DropdownMenuItem
                                 key={city}
                                 onClick={() => setSelectedCity(city)}
