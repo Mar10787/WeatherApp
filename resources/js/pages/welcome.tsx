@@ -31,7 +31,7 @@ export default function Welcome() {
         }
     }, [currentTime, isManualMode]);
 
-    const toggleDarkMode = () => {
+    const toggleDarkMode = () 
         setIsManualMode(true);
         setIsDark(!isDark);
     };
